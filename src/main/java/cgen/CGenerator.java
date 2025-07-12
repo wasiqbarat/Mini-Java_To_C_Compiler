@@ -155,10 +155,6 @@ public class CGenerator {
             args.add(recv);
             for (Expression a : c.args()) args.add(visitExpr(a));
             return recv + "->" + c.methodName() + "(" + String.join(", ", args) + ")";
-            return "/* new " + no.className() + " */ 0";
-        }
-        if (e instanceof CallExpr c) {
-            return "/* call " + c.methodName() + " */ 0";
         }
         if (e instanceof ThisExpr) {
             return "this";
@@ -205,6 +201,11 @@ public class CGenerator {
         emit("struct " + c.name() + "* new_" + c.name() + "() {");
         indent++;
         emit("struct " + c.name() + "* obj = calloc(1, sizeof(struct " + c.name() + "));");
+        if (c.superName() != null) {
+            emit("struct " + c.superName() + "* base = new_" + c.superName() + "();");
+            emit("obj->super = *base;");
+            emit("free(base);");
+        }
         for (MethodDecl m : c.methods()) {
             emit("obj->" + m.name() + " = " + c.name() + "_" + m.name() + ";");
             if (c.superName() != null) {
