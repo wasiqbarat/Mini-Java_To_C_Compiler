@@ -3,6 +3,9 @@ package cli;
 import ast.Program;
 import main.MiniJavaLexer;
 import main.MiniJavaParser;
+import sem.SemanticAnalyzer;
+import sem.SemanticException;
+import tac.TacGenerator;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -50,9 +53,25 @@ public class Main {
             AstBuilder astBuilder = new AstBuilder();
             Program ast = (Program) astBuilder.visit(tree);
 
+            // Run semantic analysis before continuing
+            SemanticAnalyzer analyzer = new SemanticAnalyzer();
+            try {
+                analyzer.analyze(ast);
+                System.out.println("Semantic analysis succeeded.");
+            } catch (SemanticException se) {
+                System.err.println("Semantic error: " + se.getMessage());
+                return;
+            }
+
             // Print the AST in a readable format
             AstPrinter printer = new AstPrinter(System.out);
             printer.print(ast);
+
+            // Generate and print Three Address Code
+            TacGenerator tacGen = new TacGenerator();
+            var tac = tacGen.generate(ast);
+            System.out.println("TAC:");
+            tac.forEach(System.out::println);
 
         } catch (IOException e) {
             System.err.println("Error reading file: " + filePath);
