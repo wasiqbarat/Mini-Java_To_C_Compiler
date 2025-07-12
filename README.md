@@ -51,5 +51,8 @@ mvn -q package
 java -cp target/mini-java-compiler-1.0-SNAPSHOT.jar cli.Main Factorial.java
 ```
 
-If a semantic error is encountered, the message will be printed and compilation stops. When analysis succeeds, the compiler prints the AST followed by a TAC
-listing.
+If a semantic error is encountered, the message will be printed and compilation stops. When analysis succeeds, the compiler prints the AST followed by a TAC listing.
+The TAC generator handles if/else statements and loops (while, do-while, and for) with break and continue using labels and conditional jumps.
+
+The C generator emits `struct` definitions for every class, embedding a `super` field to model inheritance.  Methods become function pointers inside the structures and standalone C functions.  A small `new_Class()` helper is produced for allocating objects and setting up these pointers along with an `int_array` helper for Java-style arrays.
+
