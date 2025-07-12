@@ -168,6 +168,11 @@ RBRACE             : '}'  ;
 LBRACK             : '['  ;
 RBRACK             : ']'  ;
 
+StringLiteral
+    : '"' (~["\\\r\n])* '"'
+    | '\'' (~['\\\r\n])* '\''
+    ;
+
 // Whitespace & Comments
 WS  : [ \t\r\n\f]+ -> skip ;
 LINE_COMMENT
