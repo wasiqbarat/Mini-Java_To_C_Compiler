@@ -15,6 +15,21 @@ public class CGenerator {
         emit("typedef struct {\n    int length;\n    int *data;\n} int_array;");
         emit("int_array* new_int_array(int size) {\n    int_array* arr = malloc(sizeof(int_array));\n    arr->length = size;\n    arr->data = calloc(size, sizeof(int));\n    return arr;\n}");
         emit("");
+
+        for (ClassDecl c : program.classes()) {
+            emit("struct " + c.name() + " {");
+            indent++;
+            if (c.superName() != null) {
+                emit("struct " + c.superName() + " super;  // Embedding structure " + c.superName() + " within " + c.name() + " to simulate inheritance");
+            }
+            for (VarDecl f : c.fields()) {
+                emit(mapType(f.type()) + " " + f.name() + ";");
+            }
+            indent--;
+            emit("};");
+            emit("");
+        }
+      
         emit("int main() {");
         indent++;
         for (Statement s : program.mainClass().statements()) {
@@ -129,4 +144,13 @@ public class CGenerator {
     private void emit(String line) {
         out.append("    ".repeat(indent)).append(line).append("\n");
     }
+
+    private String mapType(Type t) {
+        if (t.isArray()) return "int_array*";
+        if (t.name().equals("int")) return "int";
+        if (t.name().equals("boolean")) return "int";
+        // object types -> pointer to struct
+        return "struct " + t.name() + "*";
+    }
+  
 }
