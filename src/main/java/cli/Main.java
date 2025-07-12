@@ -3,6 +3,8 @@ package cli;
 import ast.Program;
 import main.MiniJavaLexer;
 import main.MiniJavaParser;
+import sem.SemanticAnalyzer;
+import sem.SemanticException;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -49,6 +51,16 @@ public class Main {
             // Build the AST from the parse tree
             AstBuilder astBuilder = new AstBuilder();
             Program ast = (Program) astBuilder.visit(tree);
+
+            // Run semantic analysis before continuing
+            SemanticAnalyzer analyzer = new SemanticAnalyzer();
+            try {
+                analyzer.analyze(ast);
+                System.out.println("Semantic analysis succeeded.");
+            } catch (SemanticException se) {
+                System.err.println("Semantic error: " + se.getMessage());
+                return;
+            }
 
             // Print the AST in a readable format
             AstPrinter printer = new AstPrinter(System.out);
