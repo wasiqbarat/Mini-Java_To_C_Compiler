@@ -51,6 +51,5 @@ mvn -q package
 java -cp target/mini-java-compiler-1.0-SNAPSHOT.jar cli.Main Factorial.java
 ```
 
-If a semantic error is encountered, the message will be printed and compilation
-stops. When analysis succeeds, the compiler prints the AST followed by a TAC
+If a semantic error is encountered, the message will be printed and compilation stops. When analysis succeeds, the compiler prints the AST followed by a TAC
 listing.
