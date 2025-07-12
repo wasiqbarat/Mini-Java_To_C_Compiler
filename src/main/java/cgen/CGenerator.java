@@ -25,11 +25,29 @@ public class CGenerator {
             for (VarDecl f : c.fields()) {
                 emit(mapType(f.type()) + " " + f.name() + ";");
             }
+            for (MethodDecl m : c.methods()) {
+                StringBuilder sig = new StringBuilder();
+                sig.append(mapType(m.returnType())).append(" (*").append(m.name()).append(")(void*");
+                for (VarDecl p : m.parameters()) {
+                    sig.append(", ").append(mapType(p.type())).append(" ").append(p.name());
+                }
+                sig.append(");");
+                emit(sig.toString());
+            }
             indent--;
             emit("};");
             emit("");
         }
-      
+
+        for (ClassDecl c : program.classes()) {
+            for (MethodDecl m : c.methods()) {
+                emitMethod(c, m);
+                emit("");
+            }
+            emitConstructor(c);
+            emit("");
+        }
+     
         emit("int main() {");
         indent++;
         for (Statement s : program.mainClass().statements()) {
@@ -129,6 +147,14 @@ public class CGenerator {
             return "new_int_array(" + visitExpr(na.size()) + ")";
         }
         if (e instanceof NewObjectExpr no) {
+            return "new_" + no.className() + "()";
+        }
+        if (e instanceof CallExpr c) {
+            String recv = visitExpr(c.receiver());
+            java.util.List<String> args = new java.util.ArrayList<>();
+            args.add(recv);
+            for (Expression a : c.args()) args.add(visitExpr(a));
+            return recv + "->" + c.methodName() + "(" + String.join(", ", args) + ")";
             return "/* new " + no.className() + " */ 0";
         }
         if (e instanceof CallExpr c) {
@@ -153,4 +179,40 @@ public class CGenerator {
         return "struct " + t.name() + "*";
     }
 
+
+    private void emitMethod(ClassDecl owner, MethodDecl m) {
+        StringBuilder header = new StringBuilder();
+        header.append(mapType(m.returnType())).append(" ")
+              .append(owner.name()).append("_").append(m.name())
+              .append("(void* self");
+        for (VarDecl p : m.parameters()) {
+            header.append(", ").append(mapType(p.type())).append(" ").append(p.name());
+        }
+        header.append(") {");
+        emit(header.toString());
+        indent++;
+        emit("struct " + owner.name() + "* this = (struct " + owner.name() + "*)self;");
+        for (VarDecl v : m.locals()) {
+            emit(mapType(v.type()) + " " + v.name() + ";");
+        }
+        for (Statement s : m.body()) visitStatement(s);
+        emit("return " + visitExpr(m.returnExpr()) + ";");
+        indent--;
+        emit("}");
+    }
+
+    private void emitConstructor(ClassDecl c) {
+        emit("struct " + c.name() + "* new_" + c.name() + "() {");
+        indent++;
+        emit("struct " + c.name() + "* obj = calloc(1, sizeof(struct " + c.name() + "));");
+        for (MethodDecl m : c.methods()) {
+            emit("obj->" + m.name() + " = " + c.name() + "_" + m.name() + ";");
+            if (c.superName() != null) {
+                emit("obj->super." + m.name() + " = " + c.name() + "_" + m.name() + ";");
+            }
+        }
+        emit("return obj;");
+        indent--;
+        emit("}");
+    }
 }
