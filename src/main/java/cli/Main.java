@@ -5,6 +5,7 @@ import main.MiniJavaLexer;
 import main.MiniJavaParser;
 import sem.SemanticAnalyzer;
 import sem.SemanticException;
+import tac.TacGenerator;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -65,6 +66,12 @@ public class Main {
             // Print the AST in a readable format
             AstPrinter printer = new AstPrinter(System.out);
             printer.print(ast);
+
+            // Generate and print Three Address Code
+            TacGenerator tacGen = new TacGenerator();
+            var tac = tacGen.generate(ast);
+            System.out.println("TAC:");
+            tac.forEach(System.out::println);
 
         } catch (IOException e) {
             System.err.println("Error reading file: " + filePath);
