@@ -173,6 +173,12 @@ public class TacGenerator {
     /* --------------- Helpers --------------- */
     private void visitMainClass(MainClass mc) {
         emit("main:");
+        for (VarDecl v : mc.locals()) {
+            if (v.init() != null) {
+                String val = visitExpr(v.init());
+                emit(v.name() + " = " + val);
+            }
+        }
         for (Statement s : mc.statements()) visitStatement(s);
         emit("end_main:");
     }

@@ -125,7 +125,14 @@ public class AstPrinter {
     }
 
     private void visitVarDecl(VarDecl node) {
-        println("VarDecl " + node.name() + " : " + node.type());
+        String line = "VarDecl " + node.name() + " : " + node.type();
+        if (node.init() != null) line += " =";
+        println(line);
+        if (node.init() != null) {
+            indent();
+            visit(node.init());
+            unindent();
+        }
     }
 
     private void visitBlockStmt(BlockStmt node) {

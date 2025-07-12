@@ -35,7 +35,7 @@ classDeclaration
     ;
 
 varDeclaration
-    : type Identifier ';'
+    : type Identifier ('=' expression)? ';'
     ;
 
 methodDeclaration

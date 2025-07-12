@@ -59,7 +59,8 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     @Override public VarDecl visitVarDeclaration(MiniJavaParser.VarDeclarationContext ctx) {
         Type t = (Type) visit(ctx.type());
         String name = ctx.Identifier().getText();
-        return new VarDecl(t, name);
+        Expression init = ctx.expression() == null ? null : (Expression) visit(ctx.expression());
+        return new VarDecl(t, name, init);
     }
 
     /* methodDeclaration */
@@ -74,7 +75,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
             for (int i = 0; i < paramsCtx.type().size(); i++) {
                 Type paramType = (Type) visit(paramsCtx.type(i));
                 String paramName = paramsCtx.Identifier(i).getText();
-                params.add(new VarDecl(paramType, paramName));
+                params.add(new VarDecl(paramType, paramName, null));
             }
         }
 
