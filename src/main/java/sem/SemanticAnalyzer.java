@@ -47,7 +47,12 @@ public class SemanticAnalyzer {
         Deque<Map<String, Type>> scopes = new ArrayDeque<>();
         pushScope(scopes);
         scopes.peek().put(main.argName(), new Type("String", true));
+        pushScope(scopes);
+        for (VarDecl v : main.locals()) {
+            declareVar(scopes, v);
+        }
         analyzeStatements(main.statements(), scopes, classes, null);
+        popScope(scopes);
         popScope(scopes);
     }
 

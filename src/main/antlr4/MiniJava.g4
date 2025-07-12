@@ -21,6 +21,7 @@ mainClass
     : 'public' 'class' Identifier '{'
         'public' 'static' 'void' 'main'
         '(' 'String' '[' ']' Identifier ')' '{'
+            varDeclaration*
             statement*
         '}'
       '}'

@@ -41,8 +41,9 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     @Override public MainClass visitMainClass(MiniJavaParser.MainClassContext ctx) {
         String className = ctx.Identifier(0).getText();
         String argName   = ctx.Identifier(1).getText();
+        List<VarDecl> locals = visitAll(ctx.varDeclaration(), VarDecl.class);
         List<Statement> stmts = visitAll(ctx.statement(), Statement.class);
-        return new MainClass(className, argName, stmts);
+        return new MainClass(className, argName, locals, stmts);
     }
 
     /* classDeclaration */

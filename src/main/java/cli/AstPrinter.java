@@ -73,6 +73,10 @@ public class AstPrinter {
     private void visitMainClass(MainClass node) {
         println("MainClass " + node.name() + " with arg " + node.argName());
         indent();
+        println("locals:");
+        indent();
+        node.locals().forEach(this::visit);
+        unindent();
         println("body:");
         indent();
         node.statements().forEach(this::visit);

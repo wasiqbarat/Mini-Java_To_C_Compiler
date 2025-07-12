@@ -55,6 +55,9 @@ public class CGenerator {
      
         emit("int main() {");
         indent++;
+        for (VarDecl v : program.mainClass().locals()) {
+            emit(mapType(v.type()) + " " + v.name() + ";");
+        }
         for (Statement s : program.mainClass().statements()) {
             visitStatement(s);
         }
