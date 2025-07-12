@@ -29,6 +29,7 @@ public class CGenerator {
             emit("};");
             emit("");
         }
+      
         emit("int main() {");
         indent++;
         for (Statement s : program.mainClass().statements()) {
@@ -151,4 +152,5 @@ public class CGenerator {
         // object types -> pointer to struct
         return "struct " + t.name() + "*";
     }
+  
 }
