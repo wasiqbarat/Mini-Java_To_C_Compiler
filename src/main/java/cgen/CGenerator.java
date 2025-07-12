@@ -55,6 +55,11 @@ public class CGenerator {
      
         emit("int main() {");
         indent++;
+        for (VarDecl v : program.mainClass().locals()) {
+            String line = mapType(v.type()) + " " + v.name();
+            if (v.init() != null) line += " = " + visitExpr(v.init());
+            emit(line + ";");
+        }
         for (Statement s : program.mainClass().statements()) {
             visitStatement(s);
         }
@@ -194,7 +199,9 @@ public class CGenerator {
         indent++;
         emit("struct " + owner.name() + "* this = (struct " + owner.name() + "*)self;");
         for (VarDecl v : m.locals()) {
-            emit(mapType(v.type()) + " " + v.name() + ";");
+            String line = mapType(v.type()) + " " + v.name();
+            if (v.init() != null) line += " = " + visitExpr(v.init());
+            emit(line + ";");
         }
         for (Statement s : m.body()) visitStatement(s);
         emit("return " + visitExpr(m.returnExpr()) + ";");

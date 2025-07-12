@@ -1,5 +1,7 @@
 package ast;
 
-/** A field or local variable declaration. */
-public record VarDecl(Type type, String name) implements Node {
+import ast.Expression;
+
+/** A field or local variable declaration with optional initializer. */
+public record VarDecl(Type type, String name, Expression init) implements Node {
 }

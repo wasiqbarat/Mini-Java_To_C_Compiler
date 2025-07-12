@@ -21,6 +21,7 @@ mainClass
     : 'public' 'class' Identifier '{'
         'public' 'static' 'void' 'main'
         '(' 'String' '[' ']' Identifier ')' '{'
+            varDeclaration*
             statement*
         '}'
       '}'
@@ -34,7 +35,7 @@ classDeclaration
     ;
 
 varDeclaration
-    : type Identifier ';'
+    : type Identifier ('=' expression)? ';'
     ;
 
 methodDeclaration

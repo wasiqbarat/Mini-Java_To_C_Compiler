@@ -73,6 +73,10 @@ public class AstPrinter {
     private void visitMainClass(MainClass node) {
         println("MainClass " + node.name() + " with arg " + node.argName());
         indent();
+        println("locals:");
+        indent();
+        node.locals().forEach(this::visit);
+        unindent();
         println("body:");
         indent();
         node.statements().forEach(this::visit);
@@ -121,7 +125,14 @@ public class AstPrinter {
     }
 
     private void visitVarDecl(VarDecl node) {
-        println("VarDecl " + node.name() + " : " + node.type());
+        String line = "VarDecl " + node.name() + " : " + node.type();
+        if (node.init() != null) line += " =";
+        println(line);
+        if (node.init() != null) {
+            indent();
+            visit(node.init());
+            unindent();
+        }
     }
 
     private void visitBlockStmt(BlockStmt node) {

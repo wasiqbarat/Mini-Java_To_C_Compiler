@@ -375,42 +375,58 @@ public class MiniJavaParser extends Parser {
 	}
 
 	@SuppressWarnings("CheckReturnValue")
-	public static class VarDeclarationContext extends ParserRuleContext {
-		public TypeContext type() {
-			return getRuleContext(TypeContext.class,0);
-		}
-		public TerminalNode Identifier() { return getToken(MiniJavaParser.Identifier, 0); }
-		public TerminalNode SEMICOLON() { return getToken(MiniJavaParser.SEMICOLON, 0); }
-		public VarDeclarationContext(ParserRuleContext parent, int invokingState) {
-			super(parent, invokingState);
-		}
-		@Override public int getRuleIndex() { return RULE_varDeclaration; }
-	}
+        public static class VarDeclarationContext extends ParserRuleContext {
+                public TypeContext type() {
+                        return getRuleContext(TypeContext.class,0);
+                }
+                public TerminalNode Identifier() { return getToken(MiniJavaParser.Identifier, 0); }
+                public TerminalNode ASSIGN() { return getToken(MiniJavaParser.ASSIGN, 0); }
+                public ExpressionContext expression() {
+                        return getRuleContext(ExpressionContext.class,0);
+                }
+                public TerminalNode SEMICOLON() { return getToken(MiniJavaParser.SEMICOLON, 0); }
+                public VarDeclarationContext(ParserRuleContext parent, int invokingState) {
+                        super(parent, invokingState);
+                }
+                @Override public int getRuleIndex() { return RULE_varDeclaration; }
+        }
 
-	public final VarDeclarationContext varDeclaration() throws RecognitionException {
-		VarDeclarationContext _localctx = new VarDeclarationContext(_ctx, getState());
-		enterRule(_localctx, 6, RULE_varDeclaration);
-		try {
-			enterOuterAlt(_localctx, 1);
-			{
-			setState(84);
-			type();
-			setState(85);
-			match(Identifier);
-			setState(86);
-			match(SEMICOLON);
-			}
-		}
-		catch (RecognitionException re) {
-			_localctx.exception = re;
-			_errHandler.reportError(this, re);
-			_errHandler.recover(this, re);
-		}
-		finally {
-			exitRule();
-		}
-		return _localctx;
-	}
+        public final VarDeclarationContext varDeclaration() throws RecognitionException {
+                VarDeclarationContext _localctx = new VarDeclarationContext(_ctx, getState());
+                enterRule(_localctx, 6, RULE_varDeclaration);
+                try {
+                        enterOuterAlt(_localctx, 1);
+                        {
+                        setState(84);
+                        type();
+                        setState(85);
+                        match(Identifier);
+                        setState(88);
+                        _errHandler.sync(this);
+                        switch ( getInterpreter().adaptivePredict(_input,5,_ctx) ) {
+                        case 1:
+                                {
+                                setState(86);
+                                match(ASSIGN);
+                                setState(87);
+                                expression(0);
+                                }
+                                break;
+                        }
+                        setState(90);
+                        match(SEMICOLON);
+                        }
+                }
+                catch (RecognitionException re) {
+                        _localctx.exception = re;
+                        _errHandler.reportError(this, re);
+                        _errHandler.recover(this, re);
+                }
+                finally {
+                        exitRule();
+                }
+                return _localctx;
+        }
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class MethodDeclarationContext extends ParserRuleContext {
