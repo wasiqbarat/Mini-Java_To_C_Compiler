@@ -39,3 +39,17 @@ The project is divided into the following phases:
 ## How to Contribute
 
 To contribute to this project, you can fork the repository on GitHub and submit a pull request. You can also open an issue on GitHub to report a bug or request a new feature.
+
+## Running the Compiler
+
+After building the project with Maven, run the `cli.Main` class and provide the
+Mini-Java source file path (or `-` to read from standard input). The compiler
+parses the file, performs semantic analysis and prints the resulting AST.
+
+```
+mvn -q package
+java -cp target/mini-java-compiler-1.0-SNAPSHOT.jar cli.Main Factorial.java
+```
+
+If a semantic error is encountered, the message will be printed and compilation
+stops.
