@@ -55,4 +55,3 @@ If a semantic error is encountered, the message will be printed and compilation 
 The TAC generator handles if/else statements and loops (while, do-while, and for) with break and continue using labels and conditional jumps.
 
 The C generator emits `struct` definitions for every class, embedding a `super` field to model inheritance.  Methods become function pointers inside the structures and standalone C functions.  A small `new_Class()` helper is produced for allocating objects and setting up these pointers along with an `int_array` helper for Java-style arrays.
-

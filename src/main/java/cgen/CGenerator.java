@@ -47,6 +47,7 @@ public class CGenerator {
             emitConstructor(c);
             emit("");
         }
+     
         emit("int main() {");
         indent++;
         for (Statement s : program.mainClass().statements()) {
@@ -154,6 +155,10 @@ public class CGenerator {
             args.add(recv);
             for (Expression a : c.args()) args.add(visitExpr(a));
             return recv + "->" + c.methodName() + "(" + String.join(", ", args) + ")";
+            return "/* new " + no.className() + " */ 0";
+        }
+        if (e instanceof CallExpr c) {
+            return "/* call " + c.methodName() + " */ 0";
         }
         if (e instanceof ThisExpr) {
             return "this";
@@ -173,6 +178,7 @@ public class CGenerator {
         // object types -> pointer to struct
         return "struct " + t.name() + "*";
     }
+
 
     private void emitMethod(ClassDecl owner, MethodDecl m) {
         StringBuilder header = new StringBuilder();
