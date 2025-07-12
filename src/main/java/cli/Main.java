@@ -6,6 +6,7 @@ import main.MiniJavaParser;
 import sem.SemanticAnalyzer;
 import sem.SemanticException;
 import tac.TacGenerator;
+import cgen.CGenerator;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -72,6 +73,12 @@ public class Main {
             var tac = tacGen.generate(ast);
             System.out.println("TAC:");
             tac.forEach(System.out::println);
+
+            // Generate and print C code
+            CGenerator cGen = new CGenerator();
+            var c = cGen.generate(ast);
+            System.out.println("\nGenerated C code:\n");
+            System.out.println(c);
 
         } catch (IOException e) {
             System.err.println("Error reading file: " + filePath);
