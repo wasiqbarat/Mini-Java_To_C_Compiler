@@ -13,7 +13,12 @@ public class CGenerator {
         emit("#include <stdlib.h>");
         emit("");
         emit("typedef struct {\n    int length;\n    int *data;\n} int_array;");
-        emit("int_array* new_int_array(int size) {\n    int_array* arr = malloc(sizeof(int_array));\n    arr->length = size;\n    arr->data = calloc(size, sizeof(int));\n    return arr;\n}");
+        emit("int_array* new_int_array(int size) {\n" +
+             "    int_array* arr = malloc(sizeof(int_array));\n" +
+             "    arr->length = size;\n" +
+             "    arr->data = (int*) calloc(size, sizeof(int));\n" +
+             "    return arr;\n" +
+             "}");
         emit("");
 
         for (ClassDecl c : program.classes()) {

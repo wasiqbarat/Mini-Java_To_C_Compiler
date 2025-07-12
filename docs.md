@@ -424,11 +424,11 @@ This structure is crucial for being able to handle array length operations simil
 typedef struct {
 int length;
 int *data;
-} int_array:
+} int_array;
 int_array *new_int_array(int size) {
 int_array *arr = (int_array *) malloc(sizeof(int_array));
  arr->length = size;
-arr->data (int*) calloc(size, sizeof(int));
+arr->data = (int*) calloc(size, sizeof(int));
 return arr;
 }
 Translating Mini-Java Array Declarations
