@@ -152,5 +152,5 @@ public class CGenerator {
         // object types -> pointer to struct
         return "struct " + t.name() + "*";
     }
-  
+
 }
