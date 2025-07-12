@@ -4,6 +4,11 @@
 
 grammar MiniJava;
 
+@header {
+    package main;
+}
+
+
 /****************************************************************
  * PARSER RULES
  ****************************************************************/
@@ -53,17 +58,17 @@ type
     ;
 
 statement
-    : '{' statement* '}'
-    | 'if' '(' expression ')' statement 'else' statement
-    | 'while' '(' expression ')' statement
-    | 'do' statement 'while' '(' expression ')' ';'
-    | 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' statement
-    | 'System.out.println' '(' expression ')' ';'
-    | 'break' ';'
-    | 'continue' ';'
-    | Identifier '[' expression ']' '=' expression ';'
-    | Identifier '=' expression ';'
-    | ';'                       // empty statement
+    : '{' statement* '}'                                           # BlockStmt
+    | 'if' '(' expression ')' statement 'else' statement           # IfStmt
+    | 'while' '(' expression ')' statement                         # WhileStmt
+    | 'do' statement 'while' '(' expression ')' ';'                # DoWhileStmt
+    | 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' statement # ForStmt
+    | 'System.out.println' '(' expression ')' ';'                  # PrintStmt
+    | 'break' ';'                                                  # BreakStmt
+    | 'continue' ';'                                               # ContinueStmt
+    | Identifier '[' expression ']' '=' expression ';'             # ArrayAssignStmt
+    | Identifier '=' expression ';'                                # AssignStmt
+    | ';'                                                          # EmptyStmt
     ;
 
 // Helpers for for-loop parts (all optional)

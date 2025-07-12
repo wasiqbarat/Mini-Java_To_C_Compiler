@@ -1,0 +1,62 @@
+package cli;
+
+import ast.Program;
+import main.MiniJavaLexer;
+import main.MiniJavaParser;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+
+import java.io.IOException;
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        String filePath;
+        if (args.length == 0) {
+            System.out.print("Enter MiniJava source file path (or '-' to paste source): ");
+            filePath = scanner.nextLine().trim();
+        } else {
+            filePath = args[0];
+        }
+        try {
+            // Create a CharStream from the input source
+            CharStream input;
+            if ("-".equals(filePath)) {
+                System.out.println("Enter MiniJava source code. Finish with EOF (Ctrl+D):");
+                StringBuilder sb = new StringBuilder();
+                while (scanner.hasNextLine()) {
+                    sb.append(scanner.nextLine()).append('\n');
+                }
+                input = CharStreams.fromString(sb.toString());
+            } else {
+                input = CharStreams.fromFileName(filePath);
+            }
+
+            // Create a lexer
+            MiniJavaLexer lexer = new MiniJavaLexer(input);
+
+            // Create a token stream
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+            // Create a parser
+            MiniJavaParser parser = new MiniJavaParser(tokens);
+
+            // Parse the program to get a parse tree
+            MiniJavaParser.ProgramContext tree = parser.program();
+
+            // Build the AST from the parse tree
+            AstBuilder astBuilder = new AstBuilder();
+            Program ast = (Program) astBuilder.visit(tree);
+
+            // Print the AST in a readable format
+            AstPrinter printer = new AstPrinter(System.out);
+            printer.print(ast);
+
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + filePath);
+            e.printStackTrace();
+        }
+    }
+}
