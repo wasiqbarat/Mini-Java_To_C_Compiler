@@ -50,6 +50,12 @@ public class SemanticAnalyzer {
         pushScope(scopes);
         for (VarDecl v : main.locals()) {
             declareVar(scopes, v);
+            if (v.init() != null) {
+                Type val = typeOf(v.init(), scopes, classes, null);
+                if (!isAssignable(val, v.type(), classes)) {
+                    throw new SemanticException("Cannot assign " + val + " to variable " + v.name());
+                }
+            }
         }
         analyzeStatements(main.statements(), scopes, classes, null);
         popScope(scopes);
@@ -71,6 +77,12 @@ public class SemanticAnalyzer {
         pushScope(scopes);
         for (VarDecl v : md.locals()) {
             declareVar(scopes, v);
+            if (v.init() != null) {
+                Type val = typeOf(v.init(), scopes, classes, owner);
+                if (!isAssignable(val, v.type(), classes)) {
+                    throw new SemanticException("Cannot assign " + val + " to variable " + v.name());
+                }
+            }
         }
         analyzeStatements(md.body(), scopes, classes, owner);
         Type ret = typeOf(md.returnExpr(), scopes, classes, owner);
