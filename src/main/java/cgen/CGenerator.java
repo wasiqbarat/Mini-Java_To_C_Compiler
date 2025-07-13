@@ -59,6 +59,7 @@ public class CGenerator {
             String line = mapType(v.type()) + " " + v.name();
             if (v.init() != null) line += " = " + visitExpr(v.init());
             emit(line + ";");
+            emit(mapType(v.type()) + " " + v.name() + ";");
         }
         for (Statement s : program.mainClass().statements()) {
             visitStatement(s);
