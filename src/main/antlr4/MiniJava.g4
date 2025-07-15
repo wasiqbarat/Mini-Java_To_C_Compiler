@@ -93,6 +93,7 @@ expression
     | expression bop='||' expression                               # OrExpr
     | expression '[' expression ']'                                # ArrayLookupExpr
     | expression '.' 'length'                                      # ArrayLengthExpr
+    | Identifier '(' argumentList? ')'                             # SimpleMethodCallExpr
     | expression '.' Identifier '(' argumentList? ')'              # MethodCallExpr
     | primary                                                      # PrimaryExpr
     ;

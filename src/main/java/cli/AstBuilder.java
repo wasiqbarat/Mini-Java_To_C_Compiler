@@ -324,6 +324,14 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
          return new CallExpr(recv, name, args);   
      }
 
+     public Expression visitSimpleMethodCallExpr(MiniJavaParser.SimpleMethodCallExprContext ctx) {
+        Expression recv = new ThisExpr();
+        java.util.List<Expression> args = ctx.argumentList() == null ? java.util.List.of()
+                : visitAll(ctx.argumentList().expression(), Expression.class);
+        String name = ctx.Identifier().getText();
+        return new CallExpr(recv, name, args);
+    }
+
     /* Default fall-through */
      protected Object defaultResult() { return null; }
 }

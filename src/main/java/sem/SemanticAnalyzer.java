@@ -61,7 +61,7 @@ public class SemanticAnalyzer {
                 }
             }
         }
-        analyzeStatements(main.statements(), scopes, classes, null);
+        analyzeStatements(main.statements(), scopes, classes, null, new Type("void", false));
         popScope(scopes);
         popScope(scopes);
     }
@@ -88,8 +88,12 @@ public class SemanticAnalyzer {
                 }
             }
         }
-        analyzeStatements(md.body(), scopes, classes, owner);
-        if (!md.returnType().name().equals("void")) {
+        analyzeStatements(md.body(), scopes, classes, owner, md.returnType());
+        // Check optional trailing 'return <expr>;' that appears after the statement list
+        if (md.returnExpr() != null) {
+            if (md.returnType().name().equals("void")) {
+                throw new SemanticException("Cannot return a value from a void method");
+            }
             Type ret = typeOf(md.returnExpr(), scopes, classes, owner);
             if (!isAssignable(ret, md.returnType(), classes)) {
                 throw new SemanticException("Return type mismatch in method " + md.name());
@@ -100,38 +104,40 @@ public class SemanticAnalyzer {
     }
 
     private void analyzeStatements(List<Statement> stmts, Deque<Map<String, Type>> scopes,
-                                   Map<String, ClassInfo> classes, ClassDecl currentClass) {
+                                   Map<String, ClassInfo> classes, ClassDecl currentClass,
+                                   Type expectedReturnType) {
         int loopDepth = 0;
         for (Statement s : stmts) {
-            loopDepth = analyzeStatement(s, scopes, classes, currentClass, loopDepth);
+            loopDepth = analyzeStatement(s, scopes, classes, currentClass, loopDepth, expectedReturnType);
         }
     }
 
     private int analyzeStatement(Statement stmt, Deque<Map<String, Type>> scopes,
                                  Map<String, ClassInfo> classes, ClassDecl currentClass,
-                                 int loopDepth) {
+                                 int loopDepth,
+                                 Type expectedReturnType) {
         if (stmt instanceof BlockStmt b) {
             pushScope(scopes);
             for (Statement s : b.statements()) {
-                loopDepth = analyzeStatement(s, scopes, classes, currentClass, loopDepth);
+                loopDepth = analyzeStatement(s, scopes, classes, currentClass, loopDepth, expectedReturnType);
             }
             popScope(scopes);
         } else if (stmt instanceof IfStmt i) {
             Type cond = typeOf(i.condition(), scopes, classes, currentClass);
             expect(cond, Type.BOOLEAN, "if condition must be boolean");
-            loopDepth = analyzeStatement(i.thenBranch(), scopes, classes, currentClass, loopDepth);
+            loopDepth = analyzeStatement(i.thenBranch(), scopes, classes, currentClass, loopDepth, expectedReturnType);
             if (i.elseBranch() != null) {
-                loopDepth = analyzeStatement(i.elseBranch(), scopes, classes, currentClass, loopDepth);
+                loopDepth = analyzeStatement(i.elseBranch(), scopes, classes, currentClass, loopDepth, expectedReturnType);
             }
         } else if (stmt instanceof WhileStmt w) {
             Type cond = typeOf(w.condition(), scopes, classes, currentClass);
             expect(cond, Type.BOOLEAN, "while condition must be boolean");
             loopDepth++;
-            loopDepth = analyzeStatement(w.body(), scopes, classes, currentClass, loopDepth);
+            loopDepth = analyzeStatement(w.body(), scopes, classes, currentClass, loopDepth, expectedReturnType);
             loopDepth--;
         } else if (stmt instanceof DoWhileStmt d) {
             loopDepth++;
-            loopDepth = analyzeStatement(d.body(), scopes, classes, currentClass, loopDepth);
+            loopDepth = analyzeStatement(d.body(), scopes, classes, currentClass, loopDepth, expectedReturnType);
             loopDepth--;
             Type cond = typeOf(d.condition(), scopes, classes, currentClass);
             expect(cond, Type.BOOLEAN, "do-while condition must be boolean");
@@ -156,7 +162,7 @@ public class SemanticAnalyzer {
                 expect(cond, Type.BOOLEAN, "for condition must be boolean");
             }
             loopDepth++;
-            loopDepth = analyzeStatement(f.body(), scopes, classes, currentClass, loopDepth);
+            loopDepth = analyzeStatement(f.body(), scopes, classes, currentClass, loopDepth, expectedReturnType);
             loopDepth--;
             for (Expression e : f.update()) {
                 typeOf(e, scopes, classes, currentClass);
@@ -184,6 +190,21 @@ public class SemanticAnalyzer {
             Type elem = new Type(arr.name(), false);
             if (!isAssignable(val, elem, classes)) {
                 throw new SemanticException("Array assignment type mismatch");
+            }
+        } else if (stmt instanceof ReturnStmt r) {
+            // Validate return statement against expected method return type
+            if (expectedReturnType.name().equals("void")) {
+                if (r.expr() != null) {
+                    throw new SemanticException("Cannot return a value from a void method");
+                }
+            } else {
+                if (r.expr() == null) {
+                    throw new SemanticException("Missing return value in return statement");
+                }
+                Type retType = typeOf(r.expr(), scopes, classes, currentClass);
+                if (!isAssignable(retType, expectedReturnType, classes)) {
+                    throw new SemanticException("Return type mismatch: expected " + expectedReturnType + " but found " + retType);
+                }
             }
         } else if (stmt instanceof BreakStmt) {
             if (loopDepth == 0) {
