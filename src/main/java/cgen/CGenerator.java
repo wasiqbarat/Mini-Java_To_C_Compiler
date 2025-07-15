@@ -7,19 +7,15 @@ import ast.stmt.*;
 public class CGenerator {
     private final StringBuilder out = new StringBuilder();
     private int indent = 0;
+    // Flag to track whether any int[] arrays are used so we can conditionally emit helper code
+    private boolean arrayUsed = false;
 
     public String generate(Program program) {
         emit("#include <stdio.h>");
         emit("#include <stdlib.h>");
         emit("");
-        emit("typedef struct {\n    int length;\n    int *data;\n} int_array;");
-        emit("int_array* new_int_array(int size) {\n" +
-             "    int_array* arr = malloc(sizeof(int_array));\n" +
-             "    arr->length = size;\n" +
-             "    arr->data = (int*) calloc(size, sizeof(int));\n" +
-             "    return arr;\n" +
-             "}");
-        emit("");
+        // Record the position right after the headers; we'll inject array helpers here later if needed
+        int helperInsertPos = out.length();
 
         for (ClassDecl c : program.classes()) {
             emit("struct " + c.name() + " {");
@@ -67,6 +63,21 @@ public class CGenerator {
         emit("return 0;");
         indent--;
         emit("}");
+        // Inject array helper struct and constructor only if arrays were referenced
+        if (arrayUsed) {
+            String helpers =
+                "typedef struct {\\n" +
+                "    int length;\\n" +
+                "    int *data;\\n" +
+                "} int_array;\\n" +
+                "int_array* new_int_array(int size) {\\n" +
+                "    int_array* arr = malloc(sizeof(int_array));\\n" +
+                "    arr->length = size;\\n" +
+                "    arr->data = (int*) calloc(size, sizeof(int));\\n" +
+                "    return arr;\\n" +
+                "}\\n\\n";
+            out.insert(helperInsertPos, helpers);
+        }
         return out.toString();
     }
 
@@ -155,8 +166,9 @@ public class CGenerator {
             return visitExpr(al.array()) + "->length";
         }
         if (e instanceof NewArrayExpr na) {
-            return "new_int_array(" + visitExpr(na.size()) + ")";
-        }
+             arrayUsed = true;
+             return "new_int_array(" + visitExpr(na.size()) + ")";
+         }
         if (e instanceof NewObjectExpr no) {
             return "new_" + no.className() + "()";
         }
@@ -179,7 +191,10 @@ public class CGenerator {
     }
 
     private String mapType(Type t) {
-        if (t.isArray()) return "int_array*";
+        if (t.isArray()) {
+        arrayUsed = true;
+        return "int_array*";
+    }
         if (t.name().equals("int")) return "int";
         if (t.name().equals("boolean")) return "int";
         // object types -> pointer to struct
