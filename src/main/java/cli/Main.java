@@ -52,7 +52,7 @@ public class Main {
 
             // Build the AST from the parse tree
             AstBuilder astBuilder = new AstBuilder();
-            Program ast = (Program) astBuilder.visit(tree);
+            Program ast = astBuilder.build(tree);
 
             // Run semantic analysis before continuing
             SemanticAnalyzer analyzer = new SemanticAnalyzer();

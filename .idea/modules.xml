@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Mini-Java_To_C_Compiler.iml" filepath="$PROJECT_DIR$/Mini-Java_To_C_Compiler.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mini-java-compiler.iml" filepath="$PROJECT_DIR$/mini-java-compiler.iml" />
     </modules>
   </component>
 </project>

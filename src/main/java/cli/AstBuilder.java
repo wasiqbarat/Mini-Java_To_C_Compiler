@@ -1,7 +1,9 @@
 package cli;
 
-import main.*;
+import main.MiniJavaBaseVisitor;
+import main.MiniJavaParser;
 import ast.*;
+import ast.Program;
 import ast.expr.*;
 import ast.stmt.*;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -31,14 +33,14 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* program → mainClass classDecl* */
-    @Override public Program visitProgram(MiniJavaParser.ProgramContext ctx) {
+     public Program visitProgram(MiniJavaParser.ProgramContext ctx) {
         MainClass main = (MainClass) visit(ctx.mainClass());
         List<ClassDecl> classes = visitAll(ctx.classDeclaration(), ClassDecl.class);
         return new Program(main, classes);
     }
 
     /* mainClass rule */
-    @Override public MainClass visitMainClass(MiniJavaParser.MainClassContext ctx) {
+     public MainClass visitMainClass(MiniJavaParser.MainClassContext ctx) {
         String className = ctx.Identifier(0).getText();
         String argName   = ctx.Identifier(1).getText();
         List<VarDecl> locals = visitAll(ctx.varDeclaration(), VarDecl.class);
@@ -47,7 +49,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* classDeclaration */
-    @Override public ClassDecl visitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx) {
+     public ClassDecl visitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx) {
         String name = ctx.Identifier(0).getText();
         String superName = ctx.EXTENDS() != null ? ctx.Identifier(1).getText() : null;
         List<VarDecl> fields = visitAll(ctx.varDeclaration(), VarDecl.class);
@@ -56,7 +58,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* varDeclaration */
-    @Override public VarDecl visitVarDeclaration(MiniJavaParser.VarDeclarationContext ctx) {
+     public VarDecl visitVarDeclaration(MiniJavaParser.VarDeclarationContext ctx) {
         Type t = (Type) visit(ctx.type());
         String name = ctx.Identifier().getText();
         Expression init = ctx.expression() == null ? null : (Expression) visit(ctx.expression());
@@ -64,7 +66,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* methodDeclaration */
-    @Override public MethodDecl visitMethodDeclaration(MiniJavaParser.MethodDeclarationContext ctx) {
+     public MethodDecl visitMethodDeclaration(MiniJavaParser.MethodDeclarationContext ctx) {
         Type returnType = (Type) visit(ctx.type());
         String name = ctx.Identifier().getText();
 
@@ -87,7 +89,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* type */
-    @Override public Type visitType(MiniJavaParser.TypeContext ctx) {
+     public Type visitType(MiniJavaParser.TypeContext ctx) {
         if (ctx.INT() != null && ctx.LBRACK() != null) return Type.INT_ARR;
         if (ctx.INT() != null) return Type.INT;
         if (ctx.BOOLEAN() != null) return Type.BOOLEAN;
@@ -96,51 +98,51 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* ------------------------- statements --------------------------- */
-    @Override public Statement visitBlockStmt(MiniJavaParser.BlockStmtContext ctx) {
+     public Statement visitBlockStmt(MiniJavaParser.BlockStmtContext ctx) {
         List<Statement> stmts = visitAll(ctx.statement(), Statement.class);
         return new BlockStmt(stmts);
     }
 
-    @Override public Statement visitIfStmt(MiniJavaParser.IfStmtContext ctx) {
+     public Statement visitIfStmt(MiniJavaParser.IfStmtContext ctx) {
         Expression cond = (Expression) visit(ctx.expression());
         Statement thenB = (Statement) visit(ctx.statement(0));
         Statement elseB = (Statement) visit(ctx.statement(1));
         return new IfStmt(cond, thenB, elseB);
     }
 
-    @Override public Statement visitWhileStmt(MiniJavaParser.WhileStmtContext ctx) {
+     public Statement visitWhileStmt(MiniJavaParser.WhileStmtContext ctx) {
         Expression cond = (Expression) visit(ctx.expression());
         Statement body = (Statement) visit(ctx.statement());
         return new WhileStmt(cond, body);
     }
 
-    @Override public Statement visitDoWhileStmt(MiniJavaParser.DoWhileStmtContext ctx) {
+     public Statement visitDoWhileStmt(MiniJavaParser.DoWhileStmtContext ctx) {
         Statement body = (Statement) visit(ctx.statement());
         Expression cond = (Expression) visit(ctx.expression());
         return new DoWhileStmt(body, cond);
     }
 
-    @Override public Statement visitPrintStmt(MiniJavaParser.PrintStmtContext ctx) {
+     public Statement visitPrintStmt(MiniJavaParser.PrintStmtContext ctx) {
         Expression arg = (Expression) visit(ctx.expression());
         return new PrintStmt(arg);
     }
 
-    @Override public Statement visitBreakStmt(MiniJavaParser.BreakStmtContext ctx) {
+     public Statement visitBreakStmt(MiniJavaParser.BreakStmtContext ctx) {
         return new BreakStmt();
     }
 
-    @Override public Statement visitContinueStmt(MiniJavaParser.ContinueStmtContext ctx) {
+     public Statement visitContinueStmt(MiniJavaParser.ContinueStmtContext ctx) {
         return new ContinueStmt();
     }
 
-    @Override public Statement visitAssignStmt(MiniJavaParser.AssignStmtContext ctx) {
+     public Statement visitAssignStmt(MiniJavaParser.AssignStmtContext ctx) {
         String name = ctx.Identifier().getText();
         Expression val = (Expression) visit(ctx.expression());
         return new AssignStmt(name, val);
     }
 
     /* for-loop desugaring */
-    @Override public Statement visitForStmt(MiniJavaParser.ForStmtContext ctx) {
+     public Statement visitForStmt(MiniJavaParser.ForStmtContext ctx) {
         // The init and update parts of a for-loop are lists of expressions.
         // The grammar nests them under forExprList, so we need to go one level deeper.
         List<Expression> init   = ctx.forInit()   == null ? List.of() : visitAll(ctx.forInit().forExprList().expression(), Expression.class);
@@ -151,11 +153,11 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* ------------------------- expressions -------------------------- */
-    @Override public Expression visitPrimaryExpr(MiniJavaParser.PrimaryExprContext ctx) {
+     public Expression visitPrimaryExpr(MiniJavaParser.PrimaryExprContext ctx) {
         return (Expression) visit(ctx.primary());
     }
 
-    @Override public Expression visitPrimary(MiniJavaParser.PrimaryContext ctx) {
+     public Expression visitPrimary(MiniJavaParser.PrimaryContext ctx) {
         if (ctx.IntegerLiteral() != null) return new IntLiteral(Integer.parseInt(ctx.IntegerLiteral().getText()));
         if (ctx.TRUE() != null)  return new BooleanLiteral(true);
         if (ctx.FALSE() != null) return new BooleanLiteral(false);
@@ -165,14 +167,14 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return new VarExpr("<unsupported-primary>");
     }
 
-    @Override public Expression visitAddSubExpr(MiniJavaParser.AddSubExprContext ctx) {
+     public Expression visitAddSubExpr(MiniJavaParser.AddSubExprContext ctx) {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         BinaryOp op = ctx.bop.getText().equals("+") ? BinaryOp.ADD : BinaryOp.SUB;
         return new BinaryExpr(l, op, r);
     }
 
-    @Override public Expression visitMulDivExpr(MiniJavaParser.MulDivExprContext ctx) {
+     public Expression visitMulDivExpr(MiniJavaParser.MulDivExprContext ctx) {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         String sym = ctx.bop.getText();
@@ -184,7 +186,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return new BinaryExpr(l, op, r);
     }
 
-    @Override public Expression visitRelExpr(MiniJavaParser.RelExprContext ctx) {
+     public Expression visitRelExpr(MiniJavaParser.RelExprContext ctx) {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         BinaryOp op = switch (ctx.bop.getText()) {
@@ -198,18 +200,18 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return new BinaryExpr(l, op, r);
     }
 
-    @Override public Expression visitAndExpr(MiniJavaParser.AndExprContext ctx) {
+     public Expression visitAndExpr(MiniJavaParser.AndExprContext ctx) {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         return new BinaryExpr(l, BinaryOp.AND, r);
     }
 
-    @Override public Expression visitOrExpr(MiniJavaParser.OrExprContext ctx) {
+     public Expression visitOrExpr(MiniJavaParser.OrExprContext ctx) {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         return new BinaryExpr(l, BinaryOp.OR, r);
     }
 
     /* Default fall-through */
-    @Override protected Object defaultResult() { return null; }
+     protected Object defaultResult() { return null; }
 }
