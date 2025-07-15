@@ -114,7 +114,21 @@ public class CGenerator {
             indent--;
             emit("} while (" + visitExpr(d.condition()) + ");");
         } else if (s instanceof ForStmt f) {
-            String init = joinExprs(f.init(), ", ");
+            String init;
+            if (!f.init().isEmpty() && f.init().get(0) instanceof VarDeclStmt vd) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(mapType(vd.type())).append(" ").append(vd.name());
+                if (vd.init() != null) sb.append(" = ").append(visitExpr(vd.init()));
+                init = sb.toString();
+            } else {
+                java.util.List<Expression> exprs = new java.util.ArrayList<>();
+                for (Statement is : f.init()) {
+                    if (is instanceof ExprStmt es) {
+                        exprs.add(es.expr());
+                    }
+                }
+                init = joinExprs(exprs, ", ");
+            }
             String update = joinExprs(f.update(), ", ");
             String cond = f.cond() == null ? "" : visitExpr(f.cond());
             emit("for (" + init + "; " + cond + "; " + update + ") {");
@@ -126,7 +140,9 @@ public class CGenerator {
             emit("printf(\"%d\\n\", " + visitExpr(p.argument()) + ");");
         } else if (s instanceof AssignStmt a) {
             emit(a.varName() + " = " + visitExpr(a.value()) + ";");
-        } else if (s instanceof ArrayAssignStmt aa) {
+        } else if (s instanceof ReturnStmt r) {
+        emit("return " + visitExpr(r.expr()) + ";");
+    } else if (s instanceof ArrayAssignStmt aa) {
             emit(aa.varName() + "->data[" + visitExpr(aa.index()) + "] = " + visitExpr(aa.value()) + ";");
         } else if (s instanceof BreakStmt) {
             emit("break;");
@@ -153,6 +169,9 @@ public class CGenerator {
         }
         if (e instanceof VarExpr v) {
             return v.name();
+        }
+        if (e instanceof AssignExpr a) {
+            return "(" + a.name() + " = " + visitExpr(a.value()) + ")";
         }
         if (e instanceof BinaryExpr b) {
             return "(" + visitExpr(b.left()) + " " + b.op().symbol + " " + visitExpr(b.right()) + ")";

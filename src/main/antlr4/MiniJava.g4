@@ -67,16 +67,23 @@ statement
     | 'System.out.println' '(' expression ')' ';'                  # PrintStmt
     | 'break' ';'                                                  # BreakStmt
     | 'continue' ';'                                               # ContinueStmt
+    | 'return' expression ';'                                      # ReturnStmt
     | Identifier '[' expression ']' '=' expression ';'             # ArrayAssignStmt
     | Identifier '=' expression ';'                                # AssignStmt
     | ';'                                                          # EmptyStmt
     ;
 
 // Helpers for for-loop parts (all optional)
-forInit       : forExprList ;
+forInit       : forVarDeclaration
+              | forExprList ;
+forVarDeclaration
+    : type Identifier ('=' expression)?
+    ;
 forCondition  : expression ;
 forUpdate     : forExprList ;
-forExprList   : expression (',' expression)* ;
+forExprList   : forExpr (',' forExpr)* ;
+forExpr       : expression | forAssign ;
+forAssign     : Identifier '=' expression ;
 
 expression
     : expression bop=('*'|'/'|'%') expression                      # MulDivExpr
@@ -102,6 +109,7 @@ primary
     | 'this'
     | 'new' 'int' '[' expression ']'
     | 'new' Identifier '(' ')'
+    | '-' expression
     | '!' expression
     | '(' expression ')'
     ;

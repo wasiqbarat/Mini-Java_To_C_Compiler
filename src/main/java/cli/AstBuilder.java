@@ -2,6 +2,7 @@ package cli;
 
 import main.MiniJavaBaseVisitor;
 import main.MiniJavaParser;
+
 import ast.*;
 import ast.Program;
 import ast.expr.*;
@@ -59,6 +60,14 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
 
     /* varDeclaration */
      public VarDecl visitVarDeclaration(MiniJavaParser.VarDeclarationContext ctx) {
+        Type t = (Type) visit(ctx.type());
+        String name = ctx.Identifier().getText();
+        Expression init = ctx.expression() == null ? null : (Expression) visit(ctx.expression());
+        return new VarDecl(t, name, init);
+    }
+
+    /* forVarDeclaration (used inside for-loop init) */
+     public VarDecl visitForVarDeclaration(MiniJavaParser.ForVarDeclarationContext ctx) {
         Type t = (Type) visit(ctx.type());
         String name = ctx.Identifier().getText();
         Expression init = ctx.expression() == null ? null : (Expression) visit(ctx.expression());
@@ -146,15 +155,54 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return new AssignStmt(name, val);
     }
 
+     public Statement visitReturnStmt(MiniJavaParser.ReturnStmtContext ctx) {
+        Expression val = (Expression) visit(ctx.expression());
+        return new ReturnStmt(val);
+    }
+
     /* for-loop desugaring */
      public Statement visitForStmt(MiniJavaParser.ForStmtContext ctx) {
         // The init and update parts of a for-loop are lists of expressions.
         // The grammar nests them under forExprList, so we need to go one level deeper.
-        List<Expression> init   = ctx.forInit()   == null ? List.of() : visitAll(ctx.forInit().forExprList().expression(), Expression.class);
-        Expression cond         = ctx.forCondition() == null ? null : (Expression) visit(ctx.forCondition().expression());
-        List<Expression> update = ctx.forUpdate() == null ? List.of() : visitAll(ctx.forUpdate().forExprList().expression(), Expression.class);
+        // Build init list – it can be either expressions or a single var declaration
+        List<Statement> initStmts = new ArrayList<>();
+        if (ctx.forInit() != null) {
+            if (ctx.forInit().forExprList() != null) {
+                for (MiniJavaParser.ForExprContext ectx : ctx.forInit().forExprList().forExpr()) {
+                    Expression e = (Expression) visit(ectx);
+                    initStmts.add(new ExprStmt(e));
+                }
+            } else if (ctx.forInit().forVarDeclaration() != null) {
+                // Build whatever the visitor returns. If it's a VarDecl, wrap as VarDeclStmt.
+                Object tmp = visit(ctx.forInit().forVarDeclaration());
+                if (tmp instanceof VarDecl decl) {
+                    initStmts.add(new VarDeclStmt(decl.type(), decl.name(), decl.init()));
+                } else if (tmp instanceof Expression expr) {
+                    // fall-back – treat it like an expression statement so we stay safe
+                    initStmts.add(new ExprStmt(expr));
+                }
+            }
+        }
+
+        Expression cond = ctx.forCondition() == null ? null : (Expression) visit(ctx.forCondition().expression());
+
+        List<Expression> updateExprs = ctx.forUpdate() == null ? List.of() : visitAll(ctx.forUpdate().forExprList().forExpr(), Expression.class);
+
         Statement body = (Statement) visit(ctx.statement());
-        return new ForStmt(init, cond, update, body);
+        return new ForStmt(initStmts, cond, updateExprs, body);
+    }
+
+     public Expression visitForExpr(MiniJavaParser.ForExprContext ctx) {
+        if (ctx.expression() != null) {
+            return (Expression) visit(ctx.expression());
+        }
+        return (Expression) visit(ctx.forAssign());
+    }
+
+     public AssignExpr visitForAssign(MiniJavaParser.ForAssignContext ctx) {
+        String name = ctx.Identifier().getText();
+        Expression value = (Expression) visit(ctx.expression());
+        return new AssignExpr(name, value);
     }
 
     /* ------------------------- expressions -------------------------- */
@@ -167,7 +215,17 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         if (ctx.TRUE() != null)  return new BooleanLiteral(true);
         if (ctx.FALSE() != null) return new BooleanLiteral(false);
         if (ctx.Identifier() != null) return new VarExpr(ctx.Identifier().getText());
-
+        // Unary operators
+        if (ctx.getChildCount() == 2) { // either '-' expr or '!' expr
+            String op = ctx.getChild(0).getText();
+            Expression inner = (Expression) visit(ctx.expression());
+            if (op.equals("-")) {
+                // Desugar -e into (0 - e)
+                return new BinaryExpr(new IntLiteral(0), BinaryOp.SUB, inner);
+            } else if (op.equals("!")) {
+                return new NotExpr(inner);
+            }
+        }
         // Fallback for unimplemented primaries (this, new, etc.)
         return new VarExpr("<unsupported-primary>");
     }

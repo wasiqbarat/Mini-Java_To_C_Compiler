@@ -34,6 +34,12 @@ public class TacGenerator {
             emit("main:");
             emit("end_main:");
         }
+        // Also generate TAC for each class method
+        for (ClassDecl c : program.classes()) {
+            for (MethodDecl m : c.methods()) {
+                visitMethod(c, m);
+            }
+        }
         return code;
     }
 
@@ -75,7 +81,18 @@ public class TacGenerator {
             emit(end + ":");
             loops.pop();
         } else if (s instanceof ForStmt f) {
-            for (Expression e : f.init()) visitExpr(e);
+            for (Statement initS : f.init()) {
+                if (initS instanceof ExprStmt es) {
+                    visitExpr(es.expr());
+                } else if (initS instanceof VarDeclStmt vd) {
+                    if (vd.init() != null) {
+                        String val = visitExpr(vd.init());
+                        emit(vd.name() + " = " + val);
+                    }
+                } else {
+                    visitStatement(initS); // fallback
+                }
+            }
             String start = newLabel("for_start");
             String incr  = newLabel("incr");
             String end   = newLabel("for_end");
@@ -97,6 +114,9 @@ public class TacGenerator {
         } else if (s instanceof AssignStmt a) {
             String v = visitExpr(a.value());
             emit(a.varName() + " = " + v);
+        } else if (s instanceof ReturnStmt r) {
+            String v = visitExpr(r.expr());
+            emit("return " + v);
         } else if (s instanceof ArrayAssignStmt aa) {
             String idx = visitExpr(aa.index());
             String val = visitExpr(aa.value());
@@ -105,7 +125,14 @@ public class TacGenerator {
             if (!loops.isEmpty()) emit("goto " + loops.peek().end + ";");
         } else if (s instanceof ContinueStmt) {
             if (!loops.isEmpty()) emit("goto " + loops.peek().cont + ";");
-        } else if (s instanceof EmptyStmt) {
+        } else if (s instanceof VarDeclStmt vd) {
+        if (vd.init() != null) {
+            String val = visitExpr(vd.init());
+            emit(vd.name() + " = " + val);
+        }
+    } else if (s instanceof ExprStmt es) {
+        visitExpr(es.expr());
+    } else if (s instanceof EmptyStmt) {
             // nothing
         }
     }
@@ -174,6 +201,24 @@ public class TacGenerator {
         String t = newTemp();
         emit(t + " = <expr>");
         return t;
+    }
+
+    /* --------------- Helpers --------------- */
+    private void visitMethod(ClassDecl owner, MethodDecl m) {
+        emit(owner.name() + "_" + m.name() + ":");
+        // Initialize local vars with init expressions if present
+        for (VarDecl v : m.locals()) {
+            if (v.init() != null) {
+                String val = visitExpr(v.init());
+                emit(v.name() + " = " + val);
+            }
+        }
+        for (Statement s : m.body()) visitStatement(s);
+        if (m.returnExpr() != null) {
+            String val = visitExpr(m.returnExpr());
+            emit("return " + val);
+        }
+        emit("end_" + owner.name() + "_" + m.name() + ":");
     }
 
     /* --------------- Helpers --------------- */

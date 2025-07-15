@@ -137,8 +137,19 @@ public class SemanticAnalyzer {
             expect(cond, Type.BOOLEAN, "do-while condition must be boolean");
         } else if (stmt instanceof ForStmt f) {
             pushScope(scopes);
-            for (Expression e : f.init()) {
-                typeOf(e, scopes, classes, currentClass);
+            for (Statement initS : f.init()) {
+                if (initS instanceof VarDeclStmt vd) {
+                    // declare variable in current scope
+                    declareVar(scopes, new VarDecl(vd.type(), vd.name(), null));
+                    if (vd.init() != null) {
+                        Type val = typeOf(vd.init(), scopes, classes, currentClass);
+                        if (!isAssignable(val, vd.type(), classes)) {
+                            throw new SemanticException("Cannot assign " + val + " to variable " + vd.name());
+                        }
+                    }
+                } else if (initS instanceof ExprStmt es) {
+                    typeOf(es.expr(), scopes, classes, currentClass);
+                }
             }
             if (f.cond() != null) {
                 Type cond = typeOf(f.cond(), scopes, classes, currentClass);
@@ -243,21 +254,14 @@ public class SemanticAnalyzer {
         }
         if (expr instanceof ArrayLengthExpr al) {
             Type arr = typeOf(al.array(), scopes, classes, currentClass);
-            if (!arr.isArray()) {
-                throw new SemanticException("length applied to non-array");
-            }
-            return Type.INT;
         }
-        if (expr instanceof NewArrayExpr na) {
-            Type sz = typeOf(na.size(), scopes, classes, currentClass);
-            expect(sz, Type.INT, "Array size must be int");
-            return new Type(na.type().name(), true);
-        }
-        if (expr instanceof NewObjectExpr no) {
-            if (!classes.containsKey(no.className())) {
-                throw new SemanticException("Unknown class " + no.className());
+        if (expr instanceof AssignExpr assign) {
+            Type varType = lookupVar(assign.name(), scopes, classes, currentClass);
+            Type valType = typeOf(assign.value(), scopes, classes, currentClass);
+            if (!isAssignable(valType, varType, classes)) {
+                throw new SemanticException("Cannot assign " + valType + " to variable " + assign.name());
             }
-            return new Type(no.className(), false);
+            return varType;
         }
         if (expr instanceof CallExpr call) {
             Type recv = typeOf(call.receiver(), scopes, classes, currentClass);

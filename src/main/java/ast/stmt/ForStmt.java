@@ -11,7 +11,7 @@ import java.util.List;
  * update – list of expressions executed after each iteration;
  * body   – loop body statement.
  */
-public record ForStmt(List<Expression> init,
+public record ForStmt(List<Statement> init,
                       Expression cond,
                       List<Expression> update,
                       Statement body) implements Statement {
