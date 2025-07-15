@@ -200,8 +200,12 @@ public class SemanticAnalyzer {
     /* ------------ expression typing ------------ */
     private Type typeOf(Expression expr, Deque<Map<String, Type>> scopes,
                          Map<String, ClassInfo> classes, ClassDecl currentClass) {
+
+        // ---------- literals ----------
         if (expr instanceof IntLiteral) return Type.INT;
         if (expr instanceof BooleanLiteral) return Type.BOOLEAN;
+
+        // ---------- simple references ----------
         if (expr instanceof VarExpr v) {
             return lookupVar(v.name(), scopes, classes, currentClass);
         }
@@ -211,6 +215,15 @@ public class SemanticAnalyzer {
             }
             return new Type(currentClass.name(), false);
         }
+
+        // ---------- unary ----------
+        if (expr instanceof NotExpr n) {
+            Type t = typeOf(n.expr(), scopes, classes, currentClass);
+            expect(t, Type.BOOLEAN, "! expects boolean");
+            return Type.BOOLEAN;
+        }
+
+        // ---------- binary ----------
         if (expr instanceof BinaryExpr b) {
             Type l = typeOf(b.left(), scopes, classes, currentClass);
             Type r = typeOf(b.right(), scopes, classes, currentClass);
@@ -238,11 +251,8 @@ public class SemanticAnalyzer {
                 }
             };
         }
-        if (expr instanceof NotExpr n) {
-            Type t = typeOf(n.expr(), scopes, classes, currentClass);
-            expect(t, Type.BOOLEAN, "! expects boolean");
-            return Type.BOOLEAN;
-        }
+
+        // ---------- array access ----------
         if (expr instanceof ArrayAccessExpr a) {
             Type arr = typeOf(a.array(), scopes, classes, currentClass);
             if (!arr.isArray()) {
@@ -252,9 +262,30 @@ public class SemanticAnalyzer {
             expect(idx, Type.INT, "Array index must be int");
             return new Type(arr.name(), false);
         }
+
+        // ---------- array length ----------
         if (expr instanceof ArrayLengthExpr al) {
             Type arr = typeOf(al.array(), scopes, classes, currentClass);
+            if (!arr.isArray()) {
+                throw new SemanticException(".length applied to non-array");
+            }
+            return Type.INT;
         }
+
+        // ---------- creation ----------
+        if (expr instanceof NewArrayExpr na) {
+            Type sizeT = typeOf(na.size(), scopes, classes, currentClass);
+            expect(sizeT, Type.INT, "Array size must be int");
+            return na.type();
+        }
+        if (expr instanceof NewObjectExpr no) {
+            if (!classes.containsKey(no.className())) {
+                throw new SemanticException("Unknown class " + no.className());
+            }
+            return new Type(no.className(), false);
+        }
+
+        // ---------- assignment expr ----------
         if (expr instanceof AssignExpr assign) {
             Type varType = lookupVar(assign.name(), scopes, classes, currentClass);
             Type valType = typeOf(assign.value(), scopes, classes, currentClass);
@@ -263,6 +294,8 @@ public class SemanticAnalyzer {
             }
             return varType;
         }
+
+        // ---------- method call ----------
         if (expr instanceof CallExpr call) {
             Type recv = typeOf(call.receiver(), scopes, classes, currentClass);
             ClassInfo ci = classes.get(recv.name());
@@ -277,18 +310,20 @@ public class SemanticAnalyzer {
                 throw new SemanticException("Argument count mismatch in call to " + call.methodName());
             }
             for (int i = 0; i < call.args().size(); i++) {
-                Type arg = typeOf(call.args().get(i), scopes, classes, currentClass);
-                Type param = md.parameters().get(i).type();
-                if (!isAssignable(arg, param, classes)) {
+                Type argT = typeOf(call.args().get(i), scopes, classes, currentClass);
+                Type paramT = md.parameters().get(i).type();
+                if (!isAssignable(argT, paramT, classes)) {
                     throw new SemanticException("Argument type mismatch in call to " + call.methodName());
                 }
             }
             return md.returnType();
         }
-        return Type.INT; // unreachable fallback
+
+        // Should never reach here
+        return Type.INT;
     }
 
-    /* ------------ helpers ------------ */
+     /* ------------ helpers ------------ */
     private void pushScope(Deque<Map<String, Type>> scopes) { scopes.push(new HashMap<>()); }
     private void popScope(Deque<Map<String, Type>> scopes) { scopes.pop(); }
 

@@ -154,6 +154,15 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         Expression val = (Expression) visit(ctx.expression());
         return new AssignStmt(name, val);
     }
+    
+    /* array assignment: id[index] = value; */
+    public Statement visitArrayAssignStmt(MiniJavaParser.ArrayAssignStmtContext ctx) {
+        String var = ctx.Identifier().getText();
+        Expression index = (Expression) visit(ctx.expression(0));
+        Expression value = (Expression) visit(ctx.expression(1));
+        return new ArrayAssignStmt(var, index, value);
+    }
+
 
      public Statement visitReturnStmt(MiniJavaParser.ReturnStmtContext ctx) {
         Expression val = (Expression) visit(ctx.expression());
@@ -211,21 +220,41 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
      public Expression visitPrimary(MiniJavaParser.PrimaryContext ctx) {
+        // Literals and identifiers
         if (ctx.IntegerLiteral() != null) return new IntLiteral(Integer.parseInt(ctx.IntegerLiteral().getText()));
         if (ctx.TRUE() != null)  return new BooleanLiteral(true);
+        if (ctx.THIS() != null) return new ThisExpr();
+
+         // Creation expressions: new int[expr] | new Identifier()
+         if (ctx.getChildCount() >= 2 && "new".equals(ctx.getChild(0).getText())) {
+             if (ctx.INT() != null) { // new int[ size ]
+                 Expression size = (Expression) visit(ctx.expression());
+                 return new NewArrayExpr(Type.INT_ARR, size);
+             } else { // new ClassName()
+                 String className = ctx.Identifier().getText();
+                 return new NewObjectExpr(className);
+             }
+         }
+
+         // Parenthesised expression
+         if (ctx.LPAREN() != null) {
+             return (Expression) visit(ctx.expression());
+         }
+         // Variable reference after other checks (must be last)
         if (ctx.FALSE() != null) return new BooleanLiteral(false);
         if (ctx.Identifier() != null) return new VarExpr(ctx.Identifier().getText());
-        // Unary operators
-        if (ctx.getChildCount() == 2) { // either '-' expr or '!' expr
+        
+        // Unary operators handled via child count == 2 (prefix '-' or '!')
+        if (ctx.getChildCount() == 2) {
             String op = ctx.getChild(0).getText();
             Expression inner = (Expression) visit(ctx.expression());
-            if (op.equals("-")) {
-                // Desugar -e into (0 - e)
+            if ("-".equals(op)) {
                 return new BinaryExpr(new IntLiteral(0), BinaryOp.SUB, inner);
-            } else if (op.equals("!")) {
+            } else if ("!".equals(op)) {
                 return new NotExpr(inner);
             }
         }
+
         // Fallback for unimplemented primaries (this, new, etc.)
         return new VarExpr("<unsupported-primary>");
     }
@@ -274,6 +303,26 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         Expression r = (Expression) visit(ctx.expression(1));
         return new BinaryExpr(l, BinaryOp.OR, r);
     }
+
+    /* -------------- array & method-call expressions --------------- */
+     public Expression visitArrayLookupExpr(MiniJavaParser.ArrayLookupExprContext ctx) {
+         Expression array = (Expression) visit(ctx.expression(0));
+         Expression index = (Expression) visit(ctx.expression(1));
+         return new ArrayAccessExpr(array, index);
+     }
+
+     public Expression visitArrayLengthExpr(MiniJavaParser.ArrayLengthExprContext ctx) {
+         Expression array = (Expression) visit(ctx.expression());
+         return new ArrayLengthExpr(array);
+     }
+
+     public Expression visitMethodCallExpr(MiniJavaParser.MethodCallExprContext ctx) {
+         Expression recv = (Expression) visit(ctx.expression());
+         List<Expression> args = ctx.argumentList() == null ? List.of()
+                 : visitAll(ctx.argumentList().expression(), Expression.class);
+         String name = ctx.Identifier().getText();
+         return new CallExpr(recv, name, args);   
+     }
 
     /* Default fall-through */
      protected Object defaultResult() { return null; }
