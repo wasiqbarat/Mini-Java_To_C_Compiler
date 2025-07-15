@@ -14,7 +14,7 @@ grammar MiniJava;
  ****************************************************************/
 
 program
-    : mainClass classDeclaration* EOF
+    : mainClass? classDeclaration* EOF
     ;
 
 mainClass
@@ -39,11 +39,11 @@ varDeclaration
     ;
 
 methodDeclaration
-    : 'public' ( 'static' )? type Identifier
+    : ('public')? ( 'static' )? (type | VOID) Identifier
       '(' formalParameters? ')' '{'
           varDeclaration*
           statement*
-          'return' expression ';'
+          ('return' expression ';')?
         '}'
     ;
 

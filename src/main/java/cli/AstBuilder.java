@@ -32,9 +32,9 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return out;
     }
 
-    /* program → mainClass classDecl* */
+    /* program → (mainClass)? classDecl* */
      public Program visitProgram(MiniJavaParser.ProgramContext ctx) {
-        MainClass main = (MainClass) visit(ctx.mainClass());
+        MainClass main = ctx.mainClass() == null ? null : (MainClass) visit(ctx.mainClass());
         List<ClassDecl> classes = visitAll(ctx.classDeclaration(), ClassDecl.class);
         return new Program(main, classes);
     }
@@ -67,7 +67,12 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
 
     /* methodDeclaration */
      public MethodDecl visitMethodDeclaration(MiniJavaParser.MethodDeclarationContext ctx) {
-        Type returnType = (Type) visit(ctx.type());
+        Type returnType;
+        if (ctx.type() != null) {
+            returnType = (Type) visit(ctx.type());
+        } else { // void
+            returnType = new Type("void", false);
+        }
         String name = ctx.Identifier().getText();
 
         // Manually build the parameter list from the formalParameters context
@@ -83,7 +88,7 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
 
         List<VarDecl> locals = visitAll(ctx.varDeclaration(), VarDecl.class);
         List<Statement> body = visitAll(ctx.statement(), Statement.class);
-        Expression retExpr = (Expression) visit(ctx.expression());
+        Expression retExpr = ctx.expression() == null ? null : (Expression) visit(ctx.expression());
 
         return new MethodDecl(returnType, name, params, locals, body, retExpr);
     }

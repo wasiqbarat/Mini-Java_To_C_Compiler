@@ -12,8 +12,10 @@ public class SemanticAnalyzer {
     /** Analyze a program and throw SemanticException on error. */
     public void analyze(Program program) {
         Map<String, ClassInfo> classes = new LinkedHashMap<>();
-        String mainName = program.mainClass().name();
-        classes.put(mainName, new ClassInfo(mainName, null));
+        if (program.mainClass() != null) {
+            String mainName = program.mainClass().name();
+            classes.put(mainName, new ClassInfo(mainName, null));
+        }
         for (ClassDecl cd : program.classes()) {
             if (classes.containsKey(cd.name())) {
                 throw new SemanticException("Duplicate class: " + cd.name());
@@ -39,7 +41,9 @@ public class SemanticAnalyzer {
         for (ClassDecl cd : program.classes()) {
             analyzeClass(cd, classes);
         }
-        analyzeMain(program.mainClass(), classes);
+        if (program.mainClass() != null) {
+            analyzeMain(program.mainClass(), classes);
+        }
     }
 
     /* ------------ main method analysis ------------ */
@@ -85,9 +89,11 @@ public class SemanticAnalyzer {
             }
         }
         analyzeStatements(md.body(), scopes, classes, owner);
-        Type ret = typeOf(md.returnExpr(), scopes, classes, owner);
-        if (!isAssignable(ret, md.returnType(), classes)) {
-            throw new SemanticException("Return type mismatch in method " + md.name());
+        if (!md.returnType().name().equals("void")) {
+            Type ret = typeOf(md.returnExpr(), scopes, classes, owner);
+            if (!isAssignable(ret, md.returnType(), classes)) {
+                throw new SemanticException("Return type mismatch in method " + md.name());
+            }
         }
         popScope(scopes);
         popScope(scopes);

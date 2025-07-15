@@ -51,14 +51,15 @@ public class CGenerator {
      
         emit("int main() {");
         indent++;
-        for (VarDecl v : program.mainClass().locals()) {
-            String line = mapType(v.type()) + " " + v.name();
-            if (v.init() != null) line += " = " + visitExpr(v.init());
-            emit(line + ";");
-            emit(mapType(v.type()) + " " + v.name() + ";");
-        }
-        for (Statement s : program.mainClass().statements()) {
-            visitStatement(s);
+        if (program.mainClass() != null) {
+            for (VarDecl v : program.mainClass().locals()) {
+                String line = mapType(v.type()) + " " + v.name();
+                if (v.init() != null) line += " = " + visitExpr(v.init());
+                emit(line + ";");
+            }
+            for (Statement s : program.mainClass().statements()) {
+                visitStatement(s);
+            }
         }
         emit("return 0;");
         indent--;
@@ -204,7 +205,7 @@ public class CGenerator {
 
     private void emitMethod(ClassDecl owner, MethodDecl m) {
         StringBuilder header = new StringBuilder();
-        header.append(mapType(m.returnType())).append(" ")
+        header.append(m.returnType().name().equals("void") ? "void" : mapType(m.returnType())).append(" ")
               .append(owner.name()).append("_").append(m.name())
               .append("(void* self");
         for (VarDecl p : m.parameters()) {
@@ -220,7 +221,9 @@ public class CGenerator {
             emit(line + ";");
         }
         for (Statement s : m.body()) visitStatement(s);
-        emit("return " + visitExpr(m.returnExpr()) + ";");
+        if (!m.returnType().name().equals("void")) {
+            emit("return " + (m.returnExpr() == null ? "0" : visitExpr(m.returnExpr())) + ";");
+        }
         indent--;
         emit("}");
     }

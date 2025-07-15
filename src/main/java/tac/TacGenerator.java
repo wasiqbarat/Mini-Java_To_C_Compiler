@@ -27,7 +27,13 @@ public class TacGenerator {
 
     /** Generate TAC for the given program and return the instruction list. */
     public List<String> generate(Program program) {
-        visitMainClass(program.mainClass());
+        if (program.mainClass() != null) {
+            visitMainClass(program.mainClass());
+        } else {
+            // no main class – still emit an empty main label to keep downstream stages happy
+            emit("main:");
+            emit("end_main:");
+        }
         return code;
     }
 
