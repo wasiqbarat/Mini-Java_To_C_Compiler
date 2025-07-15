@@ -14,7 +14,7 @@ grammar MiniJava;
  ****************************************************************/
 
 program
-    : mainClass? classDeclaration* EOF
+    : classDeclaration* mainClass classDeclaration* EOF
     ;
 
 mainClass
@@ -30,7 +30,15 @@ mainClass
 classDeclaration
     : 'class' Identifier ( 'extends' Identifier )? '{'
         varDeclaration*
+        constructorDeclaration*
         methodDeclaration*
+      '}'
+    ;
+
+constructorDeclaration
+    : 'public' Identifier '(' formalParameters? ')' '{'
+        varDeclaration*
+        statement*
       '}'
     ;
 
@@ -60,7 +68,7 @@ type
 
 statement
     : '{' statement* '}'                                           # BlockStmt
-    | 'if' '(' expression ')' statement 'else' statement           # IfStmt
+    | 'if' '(' expression ')' statement ('else' statement)?           # IfStmt
     | 'while' '(' expression ')' statement                         # WhileStmt
     | 'do' statement 'while' '(' expression ')' ';'                # DoWhileStmt
     | 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' statement # ForStmt

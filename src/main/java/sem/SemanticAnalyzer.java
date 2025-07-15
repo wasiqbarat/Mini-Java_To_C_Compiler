@@ -363,8 +363,11 @@ public class SemanticAnalyzer {
         }
         if (currentClass != null) {
             ClassInfo ci = classes.get(currentClass.name());
-            VarDecl f = ci.fields.get(name);
-            if (f != null) return f.type();
+            while (ci != null) {
+                VarDecl f = ci.fields.get(name);
+                if (f != null) return f.type();
+                ci = classes.get(ci.superName);
+            }
         }
         throw new SemanticException("Undefined variable " + name);
     }

@@ -45,6 +45,11 @@ public class CGenerator {
                 emitMethod(c, m);
                 emit("");
             }
+            for (ConstructorDecl ctor : c.constructors()) {
+                emitInitializer(c, ctor);
+                emit("");
+            }
+
             emitConstructor(c);
             emit("");
         }
@@ -247,6 +252,21 @@ public class CGenerator {
         emit("}");
     }
 
+
+    private void emitInitializer(ClassDecl owner, ConstructorDecl ctor) {
+        emit("void " + owner.name() + "_init(struct " + owner.name() + "* this) {");
+        indent++;
+        for (VarDecl v : ctor.locals()) {
+            String line = mapType(v.type()) + " " + v.name();
+            if (v.init() != null) line += " = " + visitExpr(v.init());
+            emit(line + ";");
+        }
+        for (Statement s : ctor.body()) visitStatement(s);
+        indent--;
+        emit("}");
+    }
+
+
     private void emitConstructor(ClassDecl c) {
         emit("struct " + c.name() + "* new_" + c.name() + "() {");
         indent++;
@@ -262,6 +282,11 @@ public class CGenerator {
                 emit("obj->super." + m.name() + " = " + c.name() + "_" + m.name() + ";");
             }
         }
+
+        if (!c.constructors().isEmpty()) {
+            emit(c.name() + "_init(obj);");
+        }
+        
         emit("return obj;");
         indent--;
         emit("}");

@@ -54,8 +54,9 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         String name = ctx.Identifier(0).getText();
         String superName = ctx.EXTENDS() != null ? ctx.Identifier(1).getText() : null;
         List<VarDecl> fields = visitAll(ctx.varDeclaration(), VarDecl.class);
+        List<ConstructorDecl> ctors = visitAll(ctx.constructorDeclaration(), ConstructorDecl.class);
         List<MethodDecl> methods = visitAll(ctx.methodDeclaration(), MethodDecl.class);
-        return new ClassDecl(name, superName, fields, methods);
+        return new ClassDecl(name, superName, fields, ctors, methods);
     }
 
     /* varDeclaration */
@@ -102,6 +103,28 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         return new MethodDecl(returnType, name, params, locals, body, retExpr);
     }
 
+    
+    /* constructorDeclaration */
+    public ConstructorDecl visitConstructorDeclaration(MiniJavaParser.ConstructorDeclarationContext ctx) {
+        String name = ctx.Identifier().getText();
+
+        // parameters
+        List<VarDecl> params = new ArrayList<>();
+        if (ctx.formalParameters() != null) {
+            MiniJavaParser.FormalParametersContext paramsCtx = ctx.formalParameters();
+            for (int i = 0; i < paramsCtx.type().size(); i++) {
+                Type paramType = (Type) visit(paramsCtx.type(i));
+                String paramName = paramsCtx.Identifier(i).getText();
+                params.add(new VarDecl(paramType, paramName, null));
+            }
+        }
+
+        List<VarDecl> locals = visitAll(ctx.varDeclaration(), VarDecl.class);
+        List<Statement> body = visitAll(ctx.statement(), Statement.class);
+        return new ConstructorDecl(name, params, locals, body);
+    }
+
+
     /* type */
      public Type visitType(MiniJavaParser.TypeContext ctx) {
         if (ctx.INT() != null && ctx.LBRACK() != null) return Type.INT_ARR;
@@ -120,7 +143,9 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
      public Statement visitIfStmt(MiniJavaParser.IfStmtContext ctx) {
         Expression cond = (Expression) visit(ctx.expression());
         Statement thenB = (Statement) visit(ctx.statement(0));
-        Statement elseB = (Statement) visit(ctx.statement(1));
+        Statement elseB = ctx.statement().size() > 1
+                          ? (Statement) visit(ctx.statement(1))
+                          : null;        
         return new IfStmt(cond, thenB, elseB);
     }
 

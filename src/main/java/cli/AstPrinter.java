@@ -34,6 +34,7 @@ public class AstPrinter {
         else if (node instanceof MainClass) visitMainClass((MainClass) node);
         else if (node instanceof ClassDecl) visitClassDecl((ClassDecl) node);
         else if (node instanceof MethodDecl) visitMethodDecl((MethodDecl) node);
+        else if (node instanceof ConstructorDecl) visitConstructorDecl((ConstructorDecl) node);
         else if (node instanceof VarDecl) visitVarDecl((VarDecl) node);
         else if (node instanceof BlockStmt) visitBlockStmt((BlockStmt) node);
         else if (node instanceof IfStmt) visitIfStmt((IfStmt) node);
@@ -95,6 +96,10 @@ public class AstPrinter {
         indent();
         node.fields().forEach(this::visit);
         unindent();
+        println("constructors:");
+        indent();
+        node.constructors().forEach(this::visit);
+        unindent();
         println("methods:");
         indent();
         node.methods().forEach(this::visit);
@@ -120,6 +125,24 @@ public class AstPrinter {
         println("returnExpr:");
         indent();
         visit(node.returnExpr());
+        unindent();
+        unindent();
+    }
+
+    private void visitConstructorDecl(ConstructorDecl node) {
+        println("ConstructorDecl " + node.name());
+        indent();
+        println("params:");
+        indent();
+        node.parameters().forEach(this::visit);
+        unindent();
+        println("locals:");
+        indent();
+        node.locals().forEach(this::visit);
+        unindent();
+        println("body:");
+        indent();
+        node.body().forEach(this::visit);
         unindent();
         unindent();
     }
