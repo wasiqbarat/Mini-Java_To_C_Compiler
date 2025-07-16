@@ -27,15 +27,22 @@ public class SemanticAnalyzer {
         }
         for (ClassDecl cd : program.classes()) {
             ClassInfo ci = classes.get(cd.name());
+            // ---- collect fields ----
             for (VarDecl f : cd.fields()) {
                 if (ci.fields.putIfAbsent(f.name(), f) != null) {
                     throw new SemanticException("Duplicate field " + f.name() + " in class " + cd.name());
                 }
             }
+            // ---- collect methods (allow overloading) ----
             for (MethodDecl m : cd.methods()) {
-                if (ci.methods.putIfAbsent(m.name(), m) != null) {
+                // Fetch or create the overload list for this method name
+                var list = ci.methods.computeIfAbsent(m.name(), k -> new ArrayList<>());
+                // Check for an existing overload with identical parameter types (exact same signature)
+                boolean dup = list.stream().anyMatch(existing -> sameSignature(existing, m));
+                if (dup) {
                     throw new SemanticException("Duplicate method " + m.name() + " in class " + cd.name());
                 }
+                list.add(m);
             }
         }
         for (ClassDecl cd : program.classes()) {
@@ -173,6 +180,21 @@ public class SemanticAnalyzer {
             if (!t.equals(Type.INT) && !t.equals(Type.BOOLEAN)) {
                 throw new SemanticException("System.out.println expects int or boolean");
             }
+        } else if (stmt instanceof FieldAssignStmt fa) {
+            Type recvT = typeOf(fa.receiver(), scopes, classes, currentClass);
+            ClassInfo ci = classes.get(recvT.name());
+            if (ci == null) throw new SemanticException("Unknown class " + recvT.name());
+            VarDecl f = null;
+            ClassInfo walk = ci;
+            while (walk != null && f == null) {
+                f = walk.fields.get(fa.fieldName());
+                walk = classes.get(walk.superName);
+            }
+            if (f == null) throw new SemanticException("Unknown field " + fa.fieldName());
+            Type valT = typeOf(fa.value(), scopes, classes, currentClass);
+            if (!isAssignable(valT, f.type(), classes)) {
+                throw new SemanticException("Cannot assign " + valT + " to field " + fa.fieldName());
+            }
         } else if (stmt instanceof AssignStmt a) {
             Type var = lookupVar(a.varName(), scopes, classes, currentClass);
             Type val = typeOf(a.value(), scopes, classes, currentClass);
@@ -227,6 +249,24 @@ public class SemanticAnalyzer {
         if (expr instanceof BooleanLiteral) return Type.BOOLEAN;
 
         // ---------- simple references ----------
+        if (expr instanceof FieldAccessExpr fa) {
+            Type recvT = typeOf(fa.receiver(), scopes, classes, currentClass);
+            ClassInfo ci = classes.get(recvT.name());
+            if (ci == null) {
+                throw new SemanticException("Unknown class " + recvT.name());
+            }
+            VarDecl f = null;
+            ClassInfo walk = ci;
+            while (walk != null && f == null) {
+                f = walk.fields.get(fa.fieldName());
+                walk = classes.get(walk.superName);
+            }
+            if (f == null) {
+                throw new SemanticException("Unknown field " + fa.fieldName() + " in class " + recvT.name());
+            }
+            return f.type();
+        }
+
         if (expr instanceof VarExpr v) {
             return lookupVar(v.name(), scopes, classes, currentClass);
         }
@@ -323,17 +363,18 @@ public class SemanticAnalyzer {
             if (ci == null) {
                 throw new SemanticException("Unknown class " + recv.name());
             }
-            MethodDecl md = lookupMethod(ci, call.methodName(), classes);
+            // Collect argument types first
+            java.util.List<Type> argTypes = new java.util.ArrayList<>();
+            for (Expression argExpr : call.args()) {
+                argTypes.add(typeOf(argExpr, scopes, classes, currentClass));
+            }
+            MethodDecl md = lookupMethod(ci, call.methodName(), argTypes, classes);
             if (md == null) {
-                throw new SemanticException("Unknown method " + call.methodName() + " in class " + recv.name());
+                throw new SemanticException("No matching overload for method " + call.methodName() + " in class " + recv.name());
             }
-            if (md.parameters().size() != call.args().size()) {
-                throw new SemanticException("Argument count mismatch in call to " + call.methodName());
-            }
-            for (int i = 0; i < call.args().size(); i++) {
-                Type argT = typeOf(call.args().get(i), scopes, classes, currentClass);
-                Type paramT = md.parameters().get(i).type();
-                if (!isAssignable(argT, paramT, classes)) {
+            // Validate assignment compatibility (already done in lookup, but we repeat for clarity)
+            for (int i = 0; i < argTypes.size(); i++) {
+                if (!isAssignable(argTypes.get(i), md.parameters().get(i).type(), classes)) {
                     throw new SemanticException("Argument type mismatch in call to " + call.methodName());
                 }
             }
@@ -390,10 +431,24 @@ public class SemanticAnalyzer {
         return false;
     }
 
-    private MethodDecl lookupMethod(ClassInfo ci, String name, Map<String, ClassInfo> classes) {
+    private MethodDecl lookupMethod(ClassInfo ci, String name, java.util.List<Type> argTypes, Map<String, ClassInfo> classes) {
+        // Walk the inheritance chain
         while (ci != null) {
-            MethodDecl m = ci.methods.get(name);
-            if (m != null) return m;
+            java.util.List<MethodDecl> candidates = ci.methods.get(name);
+            if (candidates != null) {
+                // Try to find an exact match on parameter count and assignable types
+                for (MethodDecl m : candidates) {
+                    if (m.parameters().size() != argTypes.size()) continue;
+                    boolean ok = true;
+                    for (int i = 0; i < argTypes.size(); i++) {
+                        if (!isAssignable(argTypes.get(i), m.parameters().get(i).type(), classes)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (ok) return m;
+                }
+            }
             ci = classes.get(ci.superName);
         }
         return null;
@@ -409,11 +464,20 @@ public class SemanticAnalyzer {
         seen.remove(ci.name);
     }
 
+    private boolean sameSignature(MethodDecl a, MethodDecl b) {
+        if (a.parameters().size() != b.parameters().size()) return false;
+        for (int i = 0; i < a.parameters().size(); i++) {
+            if (!a.parameters().get(i).type().equals(b.parameters().get(i).type())) return false;
+        }
+        return true;
+    }
+
     private static class ClassInfo {
         final String name;
         final String superName;
         final Map<String, VarDecl> fields = new HashMap<>();
-        final Map<String, MethodDecl> methods = new HashMap<>();
+        // Support method overloading: list of methods per name
+        final Map<String, java.util.List<MethodDecl>> methods = new HashMap<>();
         ClassInfo(String n, String s) { name = n; superName = s; }
     }
 }

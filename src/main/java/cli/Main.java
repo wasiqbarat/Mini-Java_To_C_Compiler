@@ -50,6 +50,12 @@ public class Main {
             // Parse the program to get a parse tree
             MiniJavaParser.ProgramContext tree = parser.program();
 
+            // Abort if there were syntax errors to avoid NPEs later
+            if (parser.getNumberOfSyntaxErrors() > 0) {
+                System.err.println("Parsing failed with " + parser.getNumberOfSyntaxErrors() + " error(s).");
+                return;
+            }
+
             // Build the AST from the parse tree
             AstBuilder astBuilder = new AstBuilder();
             Program ast = astBuilder.build(tree);

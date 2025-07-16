@@ -14,7 +14,7 @@ grammar MiniJava;
  ****************************************************************/
 
 program
-    : classDeclaration* mainClass classDeclaration* EOF
+    : (mainClass)? classDeclaration* EOF
     ;
 
 mainClass
@@ -76,6 +76,7 @@ statement
     | 'break' ';'                                                  # BreakStmt
     | 'continue' ';'                                               # ContinueStmt
     | 'return' expression ';'                                      # ReturnStmt
+    | expression '.' Identifier '=' expression ';'                 # FieldAssignStmt
     | Identifier '[' expression ']' '=' expression ';'             # ArrayAssignStmt
     | Identifier '=' expression ';'                                # AssignStmt
     | ';'                                                          # EmptyStmt
@@ -103,6 +104,7 @@ expression
     | expression '.' 'length'                                      # ArrayLengthExpr
     | Identifier '(' argumentList? ')'                             # SimpleMethodCallExpr
     | expression '.' Identifier '(' argumentList? ')'              # MethodCallExpr
+    | expression '.' Identifier                                   # FieldAccessExpr
     | primary                                                      # PrimaryExpr
     ;
 

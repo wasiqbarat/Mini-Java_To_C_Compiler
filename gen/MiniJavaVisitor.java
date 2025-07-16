@@ -31,6 +31,12 @@ public interface MiniJavaVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link MiniJavaParser#constructorDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConstructorDeclaration(MiniJavaParser.ConstructorDeclarationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link MiniJavaParser#varDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

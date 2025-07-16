@@ -2,7 +2,9 @@ package cgen;
 
 import ast.*;
 import ast.expr.*;
+import ast.expr.FieldAccessExpr;
 import ast.stmt.*;
+import ast.stmt.FieldAssignStmt;
 
 public class CGenerator {
     private final StringBuilder out = new StringBuilder();
@@ -28,7 +30,8 @@ public class CGenerator {
             }
             for (MethodDecl m : c.methods()) {
                 StringBuilder sig = new StringBuilder();
-                sig.append(mapType(m.returnType())).append(" (*").append(m.name()).append(")(void*");
+                String mangledName = m.name() + "_" + m.parameters().size();
+                sig.append(mapType(m.returnType())).append(" (*").append(mangledName).append(")(void*");
                 for (VarDecl p : m.parameters()) {
                     sig.append(", ").append(mapType(p.type())).append(" ").append(p.name());
                 }
@@ -72,16 +75,16 @@ public class CGenerator {
         // Inject array helper struct and constructor only if arrays were referenced
         if (arrayUsed) {
             String helpers =
-                "typedef struct {\\n" +
-                "    int length;\\n" +
-                "    int *data;\\n" +
-                "} int_array;\\n" +
-                "int_array* new_int_array(int size) {\\n" +
-                "    int_array* arr = malloc(sizeof(int_array));\\n" +
-                "    arr->length = size;\\n" +
-                "    arr->data = (int*) calloc(size, sizeof(int));\\n" +
-                "    return arr;\\n" +
-                "}\\n\\n";
+                "typedef struct {\n" +
+                "    int length;\n" +
+                "    int *data;\n" +
+                "} int_array;\n\n" +
+                "int_array* new_int_array(int size) {\n" +
+                "    int_array* arr = malloc(sizeof(int_array));\n" +
+                "    arr->length = size;\n" +
+                "    arr->data = (int*) calloc(size, sizeof(int));\n" +
+                "    return arr;\n" +
+                "}\n\n";
             out.insert(helperInsertPos, helpers);
         }
         return out.toString();
@@ -143,6 +146,8 @@ public class CGenerator {
             emit("}");
         } else if (s instanceof PrintStmt p) {
             emit("printf(\"%d\\n\", " + visitExpr(p.argument()) + ");");
+        } else if (s instanceof FieldAssignStmt f) {
+            emit(visitExpr(f.receiver()) + "->" + f.fieldName() + " = " + visitExpr(f.value()) + ";");
         } else if (s instanceof AssignStmt a) {
             emit(a.varName() + " = " + visitExpr(a.value()) + ";");
         } else if (s instanceof ReturnStmt r) {
@@ -175,6 +180,9 @@ public class CGenerator {
         if (e instanceof VarExpr v) {
             return v.name();
         }
+        if (e instanceof FieldAccessExpr fa) {
+            return visitExpr(fa.receiver()) + "->" + fa.fieldName();
+        }
         if (e instanceof AssignExpr a) {
             return "(" + a.name() + " = " + visitExpr(a.value()) + ")";
         }
@@ -202,7 +210,8 @@ public class CGenerator {
             java.util.List<String> args = new java.util.ArrayList<>();
             args.add(recv);
             for (Expression a : c.args()) args.add(visitExpr(a));
-            return recv + "->" + c.methodName() + "(" + String.join(", ", args) + ")";
+            String mangled = c.methodName() + "_" + c.args().size();
+            return recv + "->" + mangled + "(" + String.join(", ", args) + ")";
         }
         if (e instanceof ThisExpr) {
             return "this";
@@ -229,8 +238,9 @@ public class CGenerator {
 
     private void emitMethod(ClassDecl owner, MethodDecl m) {
         StringBuilder header = new StringBuilder();
+        String mangled = m.name() + "_" + m.parameters().size();
         header.append(m.returnType().name().equals("void") ? "void" : mapType(m.returnType())).append(" ")
-              .append(owner.name()).append("_").append(m.name())
+              .append(owner.name()).append("_").append(mangled)
               .append("(void* self");
         for (VarDecl p : m.parameters()) {
             header.append(", ").append(mapType(p.type())).append(" ").append(p.name());
@@ -277,9 +287,10 @@ public class CGenerator {
             emit("free(base);");
         }
         for (MethodDecl m : c.methods()) {
-            emit("obj->" + m.name() + " = " + c.name() + "_" + m.name() + ";");
+            String mangled = m.name() + "_" + m.parameters().size();
+            emit("obj->" + mangled + " = " + c.name() + "_" + mangled + ";");
             if (c.superName() != null) {
-                emit("obj->super." + m.name() + " = " + c.name() + "_" + m.name() + ";");
+                emit("obj->super." + mangled + " = " + c.name() + "_" + mangled + ";");
             }
         }
 

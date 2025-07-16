@@ -6,6 +6,8 @@ import main.MiniJavaParser;
 import ast.*;
 import ast.Program;
 import ast.expr.*;
+import ast.expr.FieldAccessExpr;
+import ast.stmt.FieldAssignStmt;
 import ast.stmt.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 
@@ -135,6 +137,12 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
     }
 
     /* ------------------------- statements --------------------------- */
+    public Statement visitFieldAssignStmt(main.MiniJavaParser.FieldAssignStmtContext ctx) {
+        Expression recv = (Expression) visit(ctx.expression(0));
+        String field = ctx.Identifier().getText();
+        Expression val = (Expression) visit(ctx.expression(1));
+        return new FieldAssignStmt(recv, field, val);
+    }
      public Statement visitBlockStmt(MiniJavaParser.BlockStmtContext ctx) {
         List<Statement> stmts = visitAll(ctx.statement(), Statement.class);
         return new BlockStmt(stmts);
@@ -327,6 +335,13 @@ public class AstBuilder extends MiniJavaBaseVisitor<Object> {
         Expression l = (Expression) visit(ctx.expression(0));
         Expression r = (Expression) visit(ctx.expression(1));
         return new BinaryExpr(l, BinaryOp.OR, r);
+    }
+
+    /* -------------- array & method-call expressions --------------- */
+    public Expression visitFieldAccessExpr(main.MiniJavaParser.FieldAccessExprContext ctx) {
+        Expression recv = (Expression) visit(ctx.expression());
+        String field = ctx.Identifier().getText();
+        return new FieldAccessExpr(recv, field);
     }
 
     /* -------------- array & method-call expressions --------------- */
